@@ -1,8 +1,8 @@
-package.page = "./lua/?.lua;" .. package.path
-
-local build = require("luarocks.build")
+package.path = "./lua/?.lua;" .. package.path
 
 vim.schedule(function()
+	local build = require("luarocks-nvim.build")
+
 	if not build.is_prepared() then
 		build.build()
 	end

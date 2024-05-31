@@ -1,5 +1,5 @@
-local paths = require("luarocks.paths")
-local notify = require("luarocks.notify")
+local paths = require("luarocks-nvim.paths")
+local notify = require("luarocks-nvim.notify")
 
 local function install(rocks)
 	local file, error = io.open(paths.rockspec, "w+")
@@ -8,6 +8,7 @@ local function install(rocks)
 	-- Write a fake rockspec file with a list of the user's requested luarocks
 	file:write(string.format(
 		[[
+rockspec_format = "3.0"
 package = "neovim-rocks-user-rockspec"
 version = "0.0-0"
 source = { url = "some-fake-url" }
@@ -21,21 +22,33 @@ build = { type = "builtin" }
 
 	local record = notify.info({ "⌛ Installing rocks:\n", table.concat(rocks, ",") })
 
-	local output = vim.system({ paths.luarocks, "install", "--deps-only", paths.rockspec }):wait()
+	local output = vim.fn.system({
+		paths.luarocks,
+		"install",
+		"--lua-version=5.1",
+		"--server='https://nvim-neorocks.github.io/rocks-binaries/'",
+		"--deps-only",
+		paths.rockspec,
+	})
 
-	assert(output.code == 0, "[luarocks] Failed to install from rockspec\n" .. output.stderr)
+	assert(vim.v.shell_error == 0, "[luarocks] Failed to install from rockspec\n" .. output)
 
 	notify.info("✅ Installed rocks", record)
 end
 
 local function ensure(rocks)
+	-- There are no rocks requests
+	if not rocks or #rocks == 0 then
+		return
+	end
+
 	-- Get a list of installed luarocks
-	local installed_output = vim.system({ paths.luarocks, "list", "--porcelain" }):wait()
+	local installed_output = vim.fn.system({ paths.luarocks, "list", "--porcelain" })
 
 	-- Get all non-blank lines split be "\n"
 	local installed_lines = vim.tbl_filter(function(line)
 		return line ~= ""
-	end, vim.split(installed_output.stdout, "\n"))
+	end, vim.split(installed_output, "\n"))
 
 	-- Get the first element of the list
 	local installed_rocks = vim.tbl_map(function(line)
